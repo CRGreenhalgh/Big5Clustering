@@ -5,7 +5,6 @@
 #### Libraries I Need ####
 library(tidyverse)
 library(DataExplorer)
-library(factoextra)
 
 #### Read and Clean Data ####
 dat <- read_tsv("data-final.csv")
@@ -31,7 +30,7 @@ dat <- dat %>% dplyr::select(-na_count)
 
 ####
 neg_questions <- c(2,4,6,8,10,12,14,21,23,25,27,32,34,36,38,42,44,46)
-dat[,neg_questions] <- (dat[,neg_questions] * -1) + 6
+dat[,c(2,4,6,8,10,12,14,21,23,25,27,32,34,36,38,42,44,46)] <- (dat[,c(2,4,6,8,10,12,14,21,23,25,27,32,34,36,38,42,44,46)] * -1) + 6
 dat <- dat - 3
 
 #### Create sum variables
@@ -52,7 +51,12 @@ dat_new <- dat %>%
 #### Scale data
 s_dat <- scale(dat_new)
 
-# #### Random Sample
+#### Optimal Cluster
+NbClust::NbClust(dat_new, method = "kmeans")
+factoextra::fviz_nbclust(s_dat, kmeans)
+print(object.size(dat_new), units = "Gb")
+
+  # #### Random Sample
 # randrows <- sample(1:nrow(dat), 20000)
 # new_dat <- dat[randrows,]
 # s_new_dat <- scale(new_dat)
@@ -66,7 +70,7 @@ beepr::beep()
 
 #### Look at which responses go into each cluster. Add cluster ID variable
 clust$cluster
-dat_new$clusterID <- clust$cluster
+dat_new$clusterID <- as.factor(clust$cluster)
 
 #### Find percentage of responses into each cluster
 (clust_pct <- (clust$size / nrow(dat_new)) * 100)
