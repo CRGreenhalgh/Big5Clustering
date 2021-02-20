@@ -1,29 +1,46 @@
-#### Libraries I Need ####
+#### Libraries I need
 library(tidyverse)
 
-#### Calculate Distance Between Point and Centroids ####
+#### Read in data
+dat <- read_csv("big5clean.csv") %>% select(-X1)
 
-for (i in nrow(dat_new)) {
-  
-  for (j in nrow(clust$centers)) {
-  
-    # kmdist <- function(data,km) {
-    #   sqrt(clust$centers[j,] - fitted(km)[i,]) ^ 2)
-    # }
-    
-    kmdist <- function(data,km) {
-      sqrt(rowSums(dat_new[colnames(clust$centers)] - fitted(clust)) ^ 2)
-    }
-    
-    dist_temp <- clust$centers[j,] - fitted(km)[i,])
-    dat_new[i,ncol(dat_new)+j] <- dist_temp
-  }
+#### Scale data
+#s_dat <- scale(dat)
+
+#### Kmeans
+k <- 8
+set.seed(185)
+tictoc::tic()
+clust <- kmeans(dat, k, algorithm = "Lloyd"
+                , iter.max = 5000, nstart = 100
+                )
+tictoc::toc()
+beepr::beep()
+
+#### Look at which responses go into each cluster. Add cluster ID variable
+clust$cluster
+dat$clusterID <- clust$cluster
+s_dat$clusterID <- clust$cluster
+
+#### Find percentage of responses into each cluster
+clust$size
+(clust_pct <- (clust$size / nrow(dat)) * 100)
+
+#### Loop to get the mahalobis function of each datapoint
+  #Split the data set by clusterID
+dat_split <- split(dat, dat$clusterID)
+  #Create empty dataframe
+dat_new <- data.frame(NULL)
+for (i in 1:k) {
+  #take one of the splits from dat_split
+  temp <- dat_split[i] %>% as.data.frame()
+  names(temp) <- substring(names(temp),4)
+  temp <- temp %>% select(-clusterID)
+  temp$md <- mahalanobis(temp, colMeans(temp), var(temp))
+  ##Uncomment next two lines to get each cluster's df
+  #name <- paste0("k",i)
+  #assign(name,temp)
+  dat_new <- rbind(dat_new, temp)
 }
 
-
-
-big5dist <- kmdist(dat_new[,1:5], clust)
-which(big5dist <= min(big5dist))  
-big5dist[87903]
-dat_new$clusterID[87903]
-
+mean(dat_new$md <= 1.5)
