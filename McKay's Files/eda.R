@@ -152,11 +152,25 @@ for(j in 2:7) {
   }
   assign(paste0("store",j),temp)
 }
-store <- rbind(store1, store2, store3, store4, store5, store6)
+store <- rbind(store1, store2, store3, store4, store5, store6, store7[!is.na(store7[,1]),] )
 save(store, file = "distances.RData")
+load("distances.RData")
+sumNorm$Cluster <- apply(store, 1, which.min)
+
+# Distances From Each Cluster
+store[1,]
+
+# Originally Proposed Metric
+1 - store[1,]/sum(store[1,])
+
+# 1 - Distance/Max(Distance) of point
+1 - store[1,]/max(store[1,])
+
+# Standardized "Fit" to each cluster
+- (store[1,] - mean(store[1,])) / sd(store[1,])
 
 
-store7[3322,]
+
 apply(rank[1:626,7:18],1,min) %>% which.max()
 apply(rank[1:626,7:18],1,max) %>% which.max()
 
