@@ -50,6 +50,8 @@ res <- res %>% filter(nullCount == 0, zeroCount == 0) %>% select(-c(nullCount,ze
 ### Changing to numeric format
 res <- res %>% apply(2, as.numeric) %>% as.data.frame()
 
+# write.csv(res, file = "clean.csv")
+
 ### Replacing Values for negative questions
 neg.quest <- c('EXT2','EXT4','EXT6','EXT8','EXT10', # 5
                'EST2','EST4',                       # 2
@@ -66,7 +68,7 @@ pos.quest <- c('EXT1','EXT3','EXT5','EXT7','EXT9',                       # 5
 # res[,"EXT2"] %>% table #1 115440, 2 140936, 3 146777, 4 120122, 5 80047; checking values
 res[,neg.quest] <- apply(res[,neg.quest],2, function(x) (-1 * x) + 6)
 
-
+# write.csv(res, file = "clean_scale_fixed.csv")
 ### Summing values across each group
 sumRes <- res %>% mutate(EXT = rowSums(.[1:10]),
                          EST = rowSums(.[11:20]),
@@ -79,6 +81,7 @@ sumNorm <- as.data.frame(apply(sumRes,2,function(x) (x - mean(x)) / sd(x)))
 
 ### Saving Dataset
 write.csv(file = "normalized.csv",sumNorm, row.names = FALSE)
+write.csv(file = "summed.csv", sumRes, row.names = FALSE)
 
 ##################
 ### Clustering ###
@@ -118,7 +121,7 @@ summary %>% ggplot(mapping = aes(x = as.factor(Cluster), y = Mean, color = as.fa
 sumNorm[1,] %>% mutate(cluster1 = )
 
 
-clust_dist <- (matrix(as.numeric(sumNorm[1,-6]),byrow = TRUE, ncol = 5, nrow = 12) - (matrix(as.numeric(k$centers), ncol = 5, nrow = 12)))^2 %>% rowSums()
+clust_dist <- (matrix(as.numeric(sumNorm[1,]),byrow = TRUE, ncol = 5, nrow = 12) - (matrix(as.numeric(k$centers), ncol = 5, nrow = 12)))^2 %>% rowSums()
 1 - clust_dist / sum(clust_dist)
 
 
@@ -127,17 +130,25 @@ rank[,paste0("rank",1:12)] <- 0
 store1 <- c()
 
 
-pb <- progress::progress_bar$new(
-  format = "  downloading [:bar] :percent eta: :eta",
-  total = 100000, clear = FALSE, width= 100)
-for(i in 1:100000) {
-  pb$tick()
-  Sys.sleep(1 / 100000)
-  clust_dist <- (matrix(as.numeric(sumNorm[i,-6]),byrow = TRUE, ncol = 5, nrow = 12) - (matrix(as.numeric(k$centers), ncol = 5, nrow = 12)))^2 %>% rowSums()
-  temp <- rbind(temp,matrix(clust_dist,nrow = 1)) # 1 - matrix(clust_dist / max(clust_dist),nrow = 1)
-}
+# pb <- progress::progress_bar$new(
+#   format = "  downloading [:bar] :percent eta: :eta",
+#   total = 100000, clear = FALSE, width= 100)
+# for(i in 1:100000) {
+#   pb$tick()
+#   Sys.sleep(1 / 100000)
+#   clust_dist <- (matrix(as.numeric(sumNorm[i,-6]),byrow = TRUE, ncol = 5, nrow = 12) - (matrix(as.numeric(k$centers), ncol = 5, nrow = 12)))^2 %>% rowSums()
+#   temp <- rbind(temp,matrix(clust_dist,nrow = 1)) # 1 - matrix(clust_dist / max(clust_dist),nrow = 1)
+# }
 
-for(j in 2:7) {
+### Developing Distances Metric
+sumNorm <- read_csv("normalized.csv")
+sumNorm <- sumNorm %>% select(-X1)
+set.seed(02082021)
+
+k <- kmeans(sumNorm, centers = 12)
+sumNorm$Cluster <- k$cluster
+
+for(j in 1:7) {
   temp <- c()
   pb <- progress::progress_bar$new(
     format = "  downloading [:bar] :percent eta: :eta",
@@ -153,9 +164,14 @@ for(j in 2:7) {
   assign(paste0("store",j),temp)
 }
 store <- rbind(store1, store2, store3, store4, store5, store6, store7[!is.na(store7[,1]),] )
+
 save(store, file = "distances.RData")
-load("distances.RData")
-sumNorm$Cluster <- apply(store, 1, which.min)
+# load("distances.RData")
+# sumNorm$Cluster <- apply(store, 1, which.min)
+
+
+weight <- 1/ store
+weightNorm <- apply(as.data.frame(weight),1,function(x) x/sum(x))
 
 # Distances From Each Cluster
 store[1,]
@@ -242,4 +258,5 @@ hc.c <- hclust(distance)
 #   clust_averagesdf <- rbind(clust_averagesdf,clust_averages[[i]][[1]] %>% dplyr::mutate(iteration_num = i))
 # }
 
-
+x <- as.data.frame(cbind(rnorm(10, 0, 12), rnorm(10,1,3)))
+cov(x)
